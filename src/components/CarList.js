@@ -21,19 +21,17 @@ const CarList = ({ filters }) => {
         params: { ...filters, page, limit: 10, sort: sortOption, order: sortOrder }
       });
 
-      if (response.data.cars.length === 0) {
-        setHasMore(false);
-        if (reset) setCars([]);
+      if (reset) {
+        setCars(response.data.cars);
       } else {
-        setCars(prevCars => reset ? response.data.cars : [...prevCars, ...response.data.cars]);
-        if (response.data.cars.length < 10) {
-          setHasMore(false);
-        }
+        setCars(prevCars => [...prevCars, ...response.data.cars]);
       }
 
       setTotalRecords(response.data.totalRecords);
       setTotalKM(response.data.totalKM);
       setTotalAge(response.data.totalAge);
+
+      setHasMore(response.data.cars.length === 10);
 
       setLoading(false);
     } catch (err) {
