@@ -35,63 +35,41 @@ const getDistinctValues = async (field, filter = {}) => {
   }
 };
 
-// API endpoints for distinct values
-const endpoints = [
-  { path: '/api/options/makes', field: 'make' },
-  { path: '/api/options/models', field: 'model', filter: 'make' },
-  { path: '/api/options/years', field: 'year', filter: ['make', 'model'] },
-  { path: '/api/options/conditions', field: 'condition', filter: ['make', 'model'] },
-  { path: '/api/options/locations', field: 'location', filter: ['make', 'model'] },
-  { path: '/api/options/saleCategories', field: 'saleCategory', filter: ['make', 'model'] }
-];
-
-endpoints.forEach(endpoint => {
-  app.get(endpoint.path, async (req, res) => {
+// Define distinct options endpoints
+const createEndpoint = (path, field, filterFields = []) => {
+  app.get(path, async (req, res) => {
     try {
       let filter = {};
-      if (endpoint.filter) {
-        if (Array.isArray(endpoint.filter)) {
-          endpoint.filter.forEach(key => {
-            if (req.query[key]) {
-              filter[key] = req.query[key];
-            }
-          });
-        } else {
-          filter[endpoint.filter] = req.query[endpoint.filter];
+      filterFields.forEach(key => {
+        if (req.query[key]) {
+          filter[key] = req.query[key];
         }
-      }
-      const values = await getDistinctValues(endpoint.field, filter);
+      });
+      const values = await getDistinctValues(field, filter);
       res.json(values);
     } catch (err) {
       res.status(500).send(err);
     }
   });
-});
+};
+
+// Create endpoints
+createEndpoint('/api/options/makes', 'make');
+createEndpoint('/api/options/models', 'model', ['make']);
+createEndpoint('/api/options/years', 'year', ['make', 'model']);
+createEndpoint('/api/options/conditions', 'condition', ['make', 'model']);
+createEndpoint('/api/options/locations', 'location', ['make', 'model']);
+createEndpoint('/api/options/saleCategories', 'saleCategory', ['make', 'model']);
 
 // API to get cars with filters and sorting
 app.get('/api/cars', async (req, res) => {
   try {
-    console.log("Received filters:", req.query);
-
     const filters = {};
-    if (req.query.make) {
-      filters.make = req.query.make;
-    }
-    if (req.query.model) {
-      filters.model = req.query.model;
-    }
-    if (req.query.year) {
-      filters.year = parseInt(req.query.year, 10);
-    }
-    if (req.query.condition) {
-      filters.condition = req.query.condition;
-    }
-    if (req.query.location) {
-      filters.location = req.query.location;
-    }
-    if (req.query.saleCategory) {
-      filters.saleCategory = req.query.saleCategory;
-    }
+    ['make', 'model', 'year', 'condition', 'location', 'saleCategory'].forEach(field => {
+      if (req.query[field]) {
+        filters[field] = field === 'year' ? parseInt(req.query[field], 10) : req.query[field];
+      }
+    });
 
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
@@ -99,8 +77,6 @@ app.get('/api/cars', async (req, res) => {
 
     const sortOption = req.query.sort || 'saleDate';
     const sortOrder = req.query.order === 'DESC' ? -1 : 1;
-
-    console.log("Filters for query:", filters);
 
     const totalCars = await Car.find(filters);
     const totalRecords = totalCars.length;
@@ -112,8 +88,6 @@ app.get('/api/cars', async (req, res) => {
                           .skip(skip)
                           .limit(limit);
 
-    console.log("Queried cars:", cars);
-
     res.json({
       cars,
       totalRecords,
@@ -121,7 +95,6 @@ app.get('/api/cars', async (req, res) => {
       totalAge
     });
   } catch (err) {
-    console.error('Error fetching cars:', err);
     res.status(500).send(err);
   }
 });
